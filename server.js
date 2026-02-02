@@ -1,8 +1,3 @@
-/* ============================================
-   🖥️ ZOMBIE VS PLAYER - Мультиплеер Сервер
-   С системой комнат и браузером серверов
-   ============================================ */
-
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
@@ -12,404 +7,352 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-const PORT = process.env.PORT || 3000;
-
-// Статические файлы
+// Статика
 app.use(express.static(path.join(__dirname)));
+app.use(express.json());
 
 // ============================================
-// 📦 ХРАНИЛИЩЕ ДАННЫХ
+// 🌍 ИГРОВОЕ СОСТОЯНИЕ (Серверное)
 // ============================================
 
-const rooms = new Map();           // Комнаты
-const players = new Map();         // Все игроки
-let playerIdCounter = 0;
+const rooms = new Map();
+const PLAYER_COLORS = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
 
-// Цвета для игроков
-const PLAYER_COLORS = [
-    '#4CAF50', '#2196F3', '#FF9800', '#E91E63',
-    '#9C27B0', '#00BCD4', '#FFEB3B', '#795548',
-    '#FF5722', '#607D8B', '#8BC34A', '#3F51B5'
-];
+class GameRoom {
+    constructor(code, hostId, name) {
+        this.code = code;
+        this.hostId = hostId;
+        this.name = name || `Room ${code}`;
+        this.players = new Map();
+        this.zombies = new Map();
+        this.wave = 1;
+        this.gameStarted = false;
+        this.lastFrameTime = Date.now();
+        this.zombieSpawnTimer = 0;
 
-// ============================================
-// 🏠 ФУНКЦИИ КОМНАТ
-// ============================================
-
-function generateRoomCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let code = '';
-    for (let i = 0; i < 4; i++) {
-        code += chars[Math.floor(Math.random() * chars.length)];
-    }
-    return code;
-}
-
-function createRoom(hostId, hostName) {
-    let code;
-    do {
-        code = generateRoomCode();
-    } while (rooms.has(code));
-
-    const room = {
-        code: code,
-        name: `${hostName}'s Room`,
-        hostId: hostId,
-        players: new Map(),
-        gameStarted: false,
-        wave: 1,
-        zombies: [],
-        createdAt: Date.now()
-    };
-
-    rooms.set(code, room);
-    console.log(`🏠 Комната ${code} создана игроком #${hostId}`);
-    return room;
-}
-
-function joinRoom(playerId, roomCode) {
-    const room = rooms.get(roomCode.toUpperCase());
-    if (!room) return { success: false, error: 'Комната не найдена' };
-    if (room.players.size >= 8) return { success: false, error: 'Комната заполнена' };
-    if (room.gameStarted) return { success: false, error: 'Игра уже началась' };
-
-    const player = players.get(playerId);
-    if (!player) return { success: false, error: 'Игрок не найден' };
-
-    // Удаляем из предыдущей комнаты
-    if (player.roomCode) {
-        leaveRoom(playerId);
+        // Запуск игрового цикла комнаты
+        this.interval = setInterval(() => this.update(), 50); // 20 обновлений в секунду
     }
 
-    player.roomCode = room.code;
-    room.players.set(playerId, player.data);
+    addPlayer(ws, id, name) {
+        const color = PLAYER_COLORS[this.players.size % PLAYER_COLORS.length];
 
-    console.log(`👤 Игрок #${playerId} вошёл в комнату ${room.code}`);
-    return { success: true, room: room };
-}
+        this.players.set(id, {
+            ws, id, name,
+            x: 0, y: 1.6, z: 0, ry: 0,
+            hp: 100, kills: 0,
+            color: color
+        });
 
-function leaveRoom(playerId) {
-    const player = players.get(playerId);
-    if (!player || !player.roomCode) return;
+        this.broadcast({
+            type: 'playerJoined',
+            player: { id, name, color }
+        });
 
-    const room = rooms.get(player.roomCode);
-    if (!room) return;
+        // Отправляем новому игроку текущее состояние комнаты
+        const playerList = Array.from(this.players.values()).map(p => ({
+            id: p.id, name: p.name, color: p.color, kills: p.kills
+        }));
 
-    room.players.delete(playerId);
-    player.roomCode = null;
-
-    // Если комната пуста - удаляем
-    if (room.players.size === 0) {
-        rooms.delete(room.code);
-        console.log(`🗑️ Комната ${room.code} удалена (пуста)`);
+        ws.send(JSON.stringify({
+            type: 'roomState',
+            players: playerList,
+            hostId: this.hostId,
+            zombies: Array.from(this.zombies.values())
+        }));
     }
-    // Если ушёл хост - назначаем нового
-    else if (room.hostId === playerId) {
-        const newHostId = room.players.keys().next().value;
-        room.hostId = newHostId;
-        room.name = `${room.players.get(newHostId).name}'s Room`;
 
-        // Уведомляем о новом хосте
-        broadcastToRoom(room.code, {
-            type: 'newHost',
-            hostId: newHostId
+    removePlayer(id) {
+        this.players.delete(id);
+
+        if (this.players.size === 0) {
+            clearInterval(this.interval);
+            rooms.delete(this.code);
+            return;
+        }
+
+        if (id === this.hostId) {
+            this.hostId = this.players.keys().next().value;
+            this.broadcast({ type: 'newHost', hostId: this.hostId });
+        }
+
+        this.broadcast({ type: 'playerLeft', playerId: id });
+    }
+
+    startGame() {
+        if (this.gameStarted) return;
+        this.gameStarted = true;
+        this.wave = 1;
+        this.zombies.clear();
+        this.broadcast({ type: 'gameStart', wave: 1 });
+    }
+
+    update() {
+        if (!this.gameStarted) return;
+
+        const now = Date.now();
+        const dt = (now - this.lastFrameTime) / 1000;
+        this.lastFrameTime = now;
+
+        // 1. Спавн зомби
+        const maxZombies = 5 + this.wave * 2;
+        if (this.zombies.size < maxZombies) {
+            this.zombieSpawnTimer += dt;
+            if (this.zombieSpawnTimer > 2.0) { // Каждые 2 сек
+                this.spawnZombie();
+                this.zombieSpawnTimer = 0;
+            }
+        }
+
+        // 2. Логика зомби (ИИ)
+        this.zombies.forEach(zombie => {
+            // Ищем ближайшего живого игрока
+            let target = null;
+            let minDist = Infinity;
+
+            this.players.forEach(p => {
+                if (p.hp > 0) {
+                    const d = Math.sqrt((p.x - zombie.x) ** 2 + (p.z - zombie.z) ** 2);
+                    if (d < minDist) {
+                        minDist = d;
+                        target = p;
+                    }
+                }
+            });
+
+            if (target) {
+                // Идем к игроку
+                const dx = target.x - zombie.x;
+                const dz = target.z - zombie.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+
+                if (dist > 1.5) {
+                    zombie.x += (dx / dist) * zombie.speed * dt;
+                    zombie.z += (dz / dist) * zombie.speed * dt;
+                    zombie.ry = Math.atan2(dx, dz); // Поворот
+                } else {
+                    // Атака
+                    if (now - zombie.lastAttack > 1000) {
+                        // Урон игроку
+                        const p = this.players.get(target.id);
+                        if (p) {
+                            p.hp -= 10;
+                            zombie.lastAttack = now;
+
+                            p.ws.send(JSON.stringify({ type: 'playerHit', hp: p.hp }));
+
+                            if (p.hp <= 0) {
+                                this.broadcast({
+                                    type: 'playerDied',
+                                    playerId: p.id,
+                                    kills: p.kills
+                                });
+                                // Респавн (сброс HP)
+                                p.hp = 100;
+                                p.x = 0; p.z = 0; // Возврат на спавн
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // 3. Отправка состояния мира (Snapshot)
+        // Оптимизация: отправляем массивы [id, x, z, ry, hp]
+        const zombieData = [];
+        this.zombies.forEach((z, id) => {
+            zombieData.push({ id, x: z.x, z: z.z, ry: z.ry, hp: z.hp });
+        });
+
+        const playerData = [];
+        this.players.forEach((p, id) => {
+            playerData.push({ id, x: p.x, z: p.z, ry: p.ry, hp: p.hp });
+        });
+
+        this.broadcast({
+            type: 'worldUpdate',
+            zombies: zombieData,
+            players: playerData
         });
     }
 
-    // Уведомляем остальных
-    broadcastToRoom(room.code, {
-        type: 'playerLeft',
-        playerId: playerId
-    });
-}
+    spawnZombie() {
+        const id = `z_${Date.now()}_${Math.random()}`;
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 20 + Math.random() * 20; // Спавн в 20-40 метрах
 
-function getRoomList() {
-    const list = [];
-    rooms.forEach((room, code) => {
-        if (!room.gameStarted) {
-            list.push({
-                code: code,
-                name: room.name,
-                players: room.players.size,
-                maxPlayers: 8,
-                wave: room.wave
-            });
-        }
-    });
-    return list;
-}
+        this.zombies.set(id, {
+            x: Math.sin(angle) * dist,
+            z: Math.cos(angle) * dist,
+            ry: 0,
+            hp: 100 + (this.wave * 20),
+            speed: 3 + (this.wave * 0.5),
+            lastAttack: 0
+        });
+    }
 
-// ============================================
-// 📡 ВЕБСОКЕТ ОБРАБОТЧИКИ
-// ============================================
-
-console.log('🧟 Zombie VS Player Server');
-console.log('==========================');
-
-wss.on('connection', (ws) => {
-    const playerId = ++playerIdCounter;
-    const playerColor = PLAYER_COLORS[playerId % PLAYER_COLORS.length];
-
-    console.log(`✅ Игрок #${playerId} подключился`);
-
-    // Создаём игрока
-    const playerData = {
-        id: playerId,
-        name: `Игрок ${playerId}`,
-        color: playerColor,
-        x: 1500,
-        y: 1500,
-        angle: 0,
-        hp: 100,
-        kills: 0
-    };
-
-    players.set(playerId, {
-        ws,
-        data: playerData,
-        roomCode: null
-    });
-
-    // Отправляем инициализацию
-    ws.send(JSON.stringify({
-        type: 'init',
-        playerId: playerId,
-        color: playerColor
-    }));
-
-    // Обработка сообщений
-    ws.on('message', (message) => {
-        try {
-            const data = JSON.parse(message);
-            handleMessage(playerId, data);
-        } catch (e) {
-            console.error('Ошибка парсинга:', e);
-        }
-    });
-
-    // Отключение
-    ws.on('close', () => {
-        console.log(`❌ Игрок #${playerId} отключился`);
-        leaveRoom(playerId);
-        players.delete(playerId);
-    });
-
-    ws.on('error', (error) => {
-        console.error(`Ошибка у игрока #${playerId}:`, error.message);
-    });
-});
-
-function handleMessage(playerId, data) {
-    const player = players.get(playerId);
-    if (!player) return;
-
-    switch (data.type) {
-        // ============ МЕНЮ ============
-
-        case 'setName':
-            player.data.name = data.name.substring(0, 15) || `Игрок ${playerId}`;
-            break;
-
-        case 'getRooms':
-            player.ws.send(JSON.stringify({
-                type: 'roomList',
-                rooms: getRoomList()
-            }));
-            break;
-
-        case 'createRoom':
-            const newRoom = createRoom(playerId, player.data.name);
-            joinRoom(playerId, newRoom.code);
-
-            player.ws.send(JSON.stringify({
-                type: 'roomCreated',
-                room: {
-                    code: newRoom.code,
-                    name: newRoom.name,
-                    hostId: newRoom.hostId,
-                    players: Array.from(newRoom.players.values())
-                }
-            }));
-            break;
-
-        case 'joinRoom':
-            const result = joinRoom(playerId, data.code);
-
-            if (result.success) {
-                // Отправляем игроку данные комнаты
-                player.ws.send(JSON.stringify({
-                    type: 'roomJoined',
-                    room: {
-                        code: result.room.code,
-                        name: result.room.name,
-                        hostId: result.room.hostId,
-                        players: Array.from(result.room.players.values())
-                    }
-                }));
-
-                // Уведомляем остальных в комнате
-                broadcastToRoom(result.room.code, {
-                    type: 'playerJoined',
-                    player: player.data
-                }, playerId);
-            } else {
-                player.ws.send(JSON.stringify({
-                    type: 'error',
-                    message: result.error
-                }));
+    broadcast(msg, excludeId = null) {
+        const data = JSON.stringify(msg);
+        this.players.forEach(p => {
+            if (p.id !== excludeId && p.ws.readyState === WebSocket.OPEN) {
+                p.ws.send(data);
             }
-            break;
-
-        case 'leaveRoom':
-            leaveRoom(playerId);
-            player.ws.send(JSON.stringify({
-                type: 'leftRoom'
-            }));
-            break;
-
-        case 'startGame':
-            if (!player.roomCode) break;
-            const room = rooms.get(player.roomCode);
-            if (!room || room.hostId !== playerId) break;
-
-            room.gameStarted = true;
-
-            // Назначаем позиции игрокам
-            let i = 0;
-            room.players.forEach((p, id) => {
-                const angle = (i / room.players.size) * Math.PI * 2;
-                p.x = 1500 + Math.cos(angle) * 100;
-                p.y = 1500 + Math.sin(angle) * 100;
-                p.hp = 100;
-                p.kills = 0;
-                i++;
-            });
-
-            broadcastToRoom(room.code, {
-                type: 'gameStart',
-                players: Array.from(room.players.values())
-            });
-
-            console.log(`🎮 Игра началась в комнате ${room.code}`);
-            break;
-
-        // ============ ИГРА ============
-
-        case 'position':
-            if (!player.roomCode) break;
-            player.data.x = data.x;
-            player.data.y = data.y;
-            player.data.angle = data.angle;
-
-            broadcastToRoom(player.roomCode, {
-                type: 'playerMove',
-                playerId: playerId,
-                x: data.x,
-                y: data.y,
-                angle: data.angle
-            }, playerId);
-            break;
-
-        case 'shoot':
-            if (!player.roomCode) break;
-            broadcastToRoom(player.roomCode, {
-                type: 'playerShoot',
-                playerId: playerId,
-                x: data.x,
-                y: data.y,
-                angle: data.angle
-            }, playerId);
-            break;
-
-        case 'zombieKill':
-            if (!player.roomCode) break;
-            player.data.kills = (player.data.kills || 0) + 1;
-
-            broadcastToRoom(player.roomCode, {
-                type: 'zombieKilled',
-                playerId: playerId,
-                zombieId: data.zombieId,
-                kills: player.data.kills
-            });
-            break;
-
-        case 'playerHit':
-            if (!player.roomCode) break;
-            player.data.hp = data.hp;
-
-            broadcastToRoom(player.roomCode, {
-                type: 'playerHit',
-                playerId: playerId,
-                hp: data.hp
-            }, playerId);
-            break;
-
-        case 'playerDeath':
-            if (!player.roomCode) break;
-            broadcastToRoom(player.roomCode, {
-                type: 'playerDied',
-                playerId: playerId,
-                kills: player.data.kills
-            });
-            break;
-
-        case 'newWave':
-            if (!player.roomCode) break;
-            const gameRoom = rooms.get(player.roomCode);
-            if (!gameRoom || gameRoom.hostId !== playerId) break;
-
-            gameRoom.wave = data.wave;
-            broadcastToRoom(player.roomCode, {
-                type: 'waveStart',
-                wave: data.wave
-            });
-            break;
+        });
     }
 }
 
-function broadcastToRoom(roomCode, message, excludeId = null) {
-    const room = rooms.get(roomCode);
-    if (!room) return;
+// ============================================
+// 📡 WebSocket SERVER
+// ============================================
 
-    const data = JSON.stringify(message);
+let playerIdCounter = 0;
 
-    room.players.forEach((playerData, id) => {
-        if (id !== excludeId) {
-            const player = players.get(id);
-            if (player && player.ws.readyState === WebSocket.OPEN) {
-                player.ws.send(data);
+wss.on('connection', (ws) => {
+    const playerId = ++playerIdCounter;
+    let currentRoom = null;
+    let playerName = `Player ${playerId}`;
+
+    console.log(`✅ Игрок #${playerId} подключился`);
+
+    ws.on('message', (message) => {
+        try {
+            const data = JSON.parse(message);
+
+            switch (data.type) {
+                case 'setName':
+                    playerName = data.name || playerName;
+                    break;
+
+                case 'createRoom':
+                    const code = Math.random().toString(36).substring(2, 6).toUpperCase();
+                    const room = new GameRoom(code, playerId, `${playerName}'s Room`);
+                    rooms.set(code, room);
+
+                    currentRoom = room;
+                    room.addPlayer(ws, playerId, playerName);
+
+                    ws.send(JSON.stringify({
+                        type: 'roomCreated',
+                        room: { code: room.code, name: room.name, hostId: playerId, players: 1 }
+                    }));
+                    break;
+
+                case 'getRooms':
+                    const list = [];
+                    rooms.forEach(r => {
+                        list.push({
+                            code: r.code,
+                            players: r.players.size,
+                            maxPlayers: 10,
+                            name: r.name
+                        });
+                    });
+                    ws.send(JSON.stringify({ type: 'roomList', rooms: list }));
+                    break;
+
+                case 'joinRoom':
+                    const r = rooms.get(data.code);
+                    if (r) {
+                        currentRoom = r;
+                        r.addPlayer(ws, playerId, playerName);
+
+                        ws.send(JSON.stringify({
+                            type: 'roomJoined',
+                            room: { code: r.code, name: r.name, hostId: r.hostId, players: r.players.size }
+                        }));
+                    } else {
+                        ws.send(JSON.stringify({ type: 'error', message: 'Комната не найдена!' }));
+                    }
+                    break;
+
+                case 'leaveRoom':
+                    if (currentRoom) {
+                        currentRoom.removePlayer(playerId);
+                        currentRoom = null;
+                        ws.send(JSON.stringify({ type: 'leftRoom' }));
+                    }
+                    break;
+
+                case 'startGame':
+                    if (currentRoom && currentRoom.hostId === playerId) {
+                        currentRoom.startGame();
+                    }
+                    break;
+
+                case 'position':
+                    if (currentRoom) {
+                        const p = currentRoom.players.get(playerId);
+                        if (p) {
+                            p.x = data.x;
+                            p.y = data.y;
+                            p.z = data.z;
+                            p.ry = data.ry;
+                        }
+                    }
+                    break;
+
+                case 'shoot':
+                    if (currentRoom) {
+                        currentRoom.broadcast({
+                            type: 'playerShoot',
+                            playerId: playerId,
+                            pos: data.pos,
+                            dir: data.dir
+                        }, playerId);
+                    }
+                    break;
+
+                case 'zombieHit':
+                    if (currentRoom) {
+                        const z = currentRoom.zombies.get(data.id);
+                        if (z) {
+                            z.hp -= data.damage;
+                            // Броадкастим всем, что зомби получил урон (для частиц и HP баров)
+                            /* Оптимизация: HP обновится в next worldUpdate */
+
+                            if (z.hp <= 0) {
+                                currentRoom.zombies.delete(data.id);
+                                const p = currentRoom.players.get(playerId);
+                                if (p) {
+                                    p.kills++;
+                                    currentRoom.broadcast({ type: 'zombieKilled', zombieId: data.id, killerId: playerId });
+                                }
+                            }
+                        }
+                    }
+                    break;
             }
+        } catch (e) {
+            console.error('Ошибка обработки сообщения:', e);
         }
     });
-}
 
-// ============================================
-// 🌐 REST API
-// ============================================
+    ws.on('close', () => {
+        if (currentRoom) {
+            currentRoom.removePlayer(playerId);
+        }
+    });
 
-// Список комнат для браузера
-app.get('/api/rooms', (req, res) => {
-    res.json(getRoomList());
-});
-
-// Информация о сервере
-app.get('/api/info', (req, res) => {
-    res.json({
-        name: 'Zombie VS Player Server',
-        players: players.size,
-        rooms: rooms.size,
-        version: '2.0'
+    ws.on('error', (e) => {
+        console.error('Ошибка WS:', e);
     });
 });
 
-// ============================================
-// 🚀 ЗАПУСК
-// ============================================
+// REST API
+app.get('/api/rooms', (req, res) => {
+    const list = [];
+    rooms.forEach(r => {
+        list.push({
+            code: r.code,
+            players: r.players.size,
+            maxPlayers: 10,
+            name: r.name
+        });
+    });
+    res.json(list);
+});
 
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`\n🎮 Сервер запущен!`);
-    console.log(`📍 Локальный: http://localhost:${PORT}`);
-    console.log(`🌐 Для друзей: http://<ваш-IP>:${PORT}`);
-    console.log(`\n💡 Узнай свой IP командой: ipconfig`);
-    console.log(`\n⏳ Ожидание игроков...\n`);
+    console.log(`🚀 Server running on port ${PORT}`);
 });
