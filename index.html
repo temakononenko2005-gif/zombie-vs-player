@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧟 Zombie VS Player - Мультиплеер</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Russo+One&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Главное Меню -->
+    <div id="mainMenu" class="menu">
+        <div class="menu-content">
+            <h1 class="title">🧟 ZOMBIE VS PLAYER 🔫</h1>
+            <div class="subtitle">Мультиплеер Стрелялка</div>
+
+            <div class="input-group">
+                <label for="playerName">Твоё имя:</label>
+                <input type="text" id="playerName" placeholder="Введи имя..." maxlength="15">
+            </div>
+
+            <div class="menu-buttons">
+                <button id="showServersBtn" class="menu-btn servers-btn">
+                    <span>🌐 СЕРВЕРЫ</span>
+                </button>
+                <button id="createRoomBtn" class="menu-btn create-btn">
+                    <span>➕ СОЗДАТЬ КОМНАТУ</span>
+                </button>
+                <button id="soloPlayBtn" class="menu-btn solo-btn">
+                    <span>🎮 ОДИНОЧНАЯ ИГРА</span>
+                </button>
+            </div>
+
+            <div class="controls-info">
+                <h3>🎯 Управление:</h3>
+                <p><span class="key">W A S D</span> - Движение</p>
+                <p><span class="key">МЫШКА</span> - Прицел</p>
+                <p><span class="key">ЛКМ</span> - Стрелять</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Меню Серверов -->
+    <div id="serverMenu" class="menu hidden">
+        <div class="menu-content server-browser">
+            <h2 class="server-title">🌐 СПИСОК СЕРВЕРОВ</h2>
+
+            <div class="server-list-container">
+                <div id="serverList" class="server-list">
+                    <div class="loading-servers">
+                        <div class="spinner"></div>
+                        <span>Поиск серверов...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="server-actions">
+                <button id="refreshServersBtn" class="action-btn">
+                    🔄 Обновить
+                </button>
+                <button id="backToMenuBtn" class="action-btn back-btn">
+                    ⬅️ Назад
+                </button>
+            </div>
+
+            <div class="manual-connect">
+                <input type="text" id="serverAddress" placeholder="Адрес сервера (IP:порт)">
+                <button id="connectManualBtn" class="action-btn connect-btn">Подключиться</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Лобби Комнаты -->
+    <div id="roomLobby" class="menu hidden">
+        <div class="menu-content lobby-content">
+            <h2 class="lobby-title">🏠 КОМНАТА: <span id="roomName">???</span></h2>
+
+            <div class="room-code-display">
+                <span>Код комнаты:</span>
+                <div id="roomCode" class="room-code">XXXX</div>
+                <button id="copyCodeBtn" class="copy-btn">📋 Копировать</button>
+            </div>
+
+            <div class="lobby-players">
+                <h3>👥 Игроки в комнате:</h3>
+                <ul id="lobbyPlayersList"></ul>
+            </div>
+
+            <div class="lobby-actions">
+                <button id="startGameBtn" class="start-btn">
+                    <span>🚀 НАЧАТЬ ИГРУ!</span>
+                </button>
+                <button id="leaveLobbyBtn" class="action-btn back-btn">
+                    ⬅️ Выйти
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Игровой UI -->
+    <div id="gameUI" class="game-ui hidden">
+        <div class="stats-panel">
+            <div class="stat-item">
+                <span class="stat-icon">💀</span>
+                <span class="stat-label">Убито:</span>
+                <span id="killCount" class="stat-value">0</span>
+            </div>
+            <div class="stat-item wave-stat">
+                <span class="stat-icon">🌊</span>
+                <span class="stat-label">Волна:</span>
+                <span id="waveNumber" class="stat-value">1</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">❤️</span>
+                <span class="stat-label">HP:</span>
+                <span id="playerHP" class="stat-value">100</span>
+            </div>
+            <div class="stat-item room-info">
+                <span class="stat-icon">🏠</span>
+                <span id="currentRoomName" class="stat-value">---</span>
+            </div>
+        </div>
+
+        <div id="playersList" class="players-list">
+            <h4>👥 Игроки:</h4>
+            <ul id="playersUL"></ul>
+        </div>
+    </div>
+
+    <!-- Игровой Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Экран Game Over -->
+    <div id="gameOver" class="game-over hidden">
+        <div class="game-over-content">
+            <h1>💀 GAME OVER 💀</h1>
+            <p>Ты убил <span id="finalScore">0</span> зомби!</p>
+            <p>Волна: <span id="finalWave">1</span></p>
+            <button id="restartBtn" class="start-btn">🔄 ЗАНОВО</button>
+            <button id="backToMenuFromGameOver" class="action-btn back-btn">🏠 В МЕНЮ</button>
+        </div>
+    </div>
+
+    <!-- Уведомление о новой волне -->
+    <div id="waveAnnounce" class="wave-announce hidden">
+        <span>🌊 ВОЛНА <span id="waveAnnounceNum">1</span> 🌊</span>
+    </div>
+
+    <!-- Уведомления -->
+    <div id="notification" class="notification hidden"></div>
+
+    <script src="game.js"></script>
+</body>
+
+</html>

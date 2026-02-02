@@ -1,0 +1,25 @@
+{
+    "name": "zombie-vs-player",
+    "version": "1.0.0",
+    "description": "🧟 Мультиплеерная мультяшная стрелялка с зомби",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "node server.js"
+    },
+    "engines": {
+        "node": ">=16.0.0"
+    },
+    "keywords": [
+        "game",
+        "zombie",
+        "multiplayer",
+        "shooter"
+    ],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+        "express": "^4.18.2",
+        "ws": "^8.14.2"
+    }
+}

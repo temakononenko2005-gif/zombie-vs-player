@@ -1,0 +1,843 @@
+/* ============================================
+   🎨 ZOMBIE VS PLAYER - Мультяшные стили
+   ============================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Russo One', sans-serif;
+    overflow: hidden;
+    background: #1a1a2e;
+    min-height: 100vh;
+}
+
+/* ============================================
+   📋 МЕНЮ СТАРТА
+   ============================================ */
+
+.menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.menu-content {
+    text-align: center;
+    padding: 40px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 30px;
+    backdrop-filter: blur(10px);
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: floatMenu 3s ease-in-out infinite;
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+@keyframes floatMenu {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.title {
+    font-family: 'Bangers', cursive;
+    font-size: 3.5rem;
+    color: #fff;
+    text-shadow:
+        4px 4px 0 #e94560,
+        8px 8px 0 #0f3460,
+        0 0 30px rgba(233, 69, 96, 0.5);
+    margin-bottom: 10px;
+    letter-spacing: 3px;
+    animation: titlePulse 2s ease-in-out infinite;
+}
+
+@keyframes titlePulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.02);
+    }
+}
+
+.subtitle {
+    font-size: 1.3rem;
+    color: #00d9ff;
+    margin-bottom: 25px;
+    text-shadow: 0 0 20px rgba(0, 217, 255, 0.6);
+}
+
+.input-group {
+    margin: 20px 0;
+}
+
+.input-group label {
+    display: block;
+    color: #fff;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+}
+
+.input-group input {
+    width: 300px;
+    padding: 12px 20px;
+    font-size: 1.2rem;
+    font-family: 'Russo One', sans-serif;
+    border: 3px solid #e94560;
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    text-align: center;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.input-group input:focus {
+    border-color: #00d9ff;
+    box-shadow: 0 0 25px rgba(0, 217, 255, 0.5);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.input-group input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* ============================================
+   🎛️ КНОПКИ МЕНЮ
+   ============================================ */
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin: 25px 0;
+}
+
+.menu-btn {
+    padding: 18px 40px;
+    font-size: 1.4rem;
+    font-family: 'Bangers', cursive;
+    letter-spacing: 2px;
+    color: #fff;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.servers-btn {
+    background: linear-gradient(135deg, #2196F3, #1976D2);
+    box-shadow: 0 8px 25px rgba(33, 150, 243, 0.4);
+}
+
+.create-btn {
+    background: linear-gradient(135deg, #4CAF50, #388E3C);
+    box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
+}
+
+.solo-btn {
+    background: linear-gradient(135deg, #FF9800, #F57C00);
+    box-shadow: 0 8px 25px rgba(255, 152, 0, 0.4);
+}
+
+.menu-btn:hover {
+    transform: translateY(-3px) scale(1.02);
+    filter: brightness(1.1);
+}
+
+.menu-btn:active {
+    transform: translateY(0) scale(0.98);
+}
+
+/* ============================================
+   🌐 БРАУЗЕР СЕРВЕРОВ
+   ============================================ */
+
+.server-browser {
+    min-width: 500px;
+    animation: none;
+}
+
+.server-title {
+    font-family: 'Bangers', cursive;
+    font-size: 2.5rem;
+    color: #00d9ff;
+    margin-bottom: 20px;
+    text-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+}
+
+.server-list-container {
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 20px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.server-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.server-item {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.server-item:hover {
+    border-color: #00d9ff;
+    background: rgba(0, 217, 255, 0.1);
+    transform: translateX(5px);
+}
+
+.server-info {
+    text-align: left;
+}
+
+.server-name {
+    font-size: 1.2rem;
+    color: #fff;
+    margin-bottom: 5px;
+}
+
+.server-details {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.server-players {
+    background: linear-gradient(135deg, #4CAF50, #388E3C);
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 1rem;
+    color: #fff;
+}
+
+.loading-servers {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    padding: 30px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #00d9ff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.no-servers {
+    text-align: center;
+    padding: 30px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.server-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.action-btn {
+    padding: 12px 25px;
+    font-size: 1.1rem;
+    font-family: 'Russo One', sans-serif;
+    color: #fff;
+    background: linear-gradient(135deg, #555, #444);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.2);
+}
+
+.back-btn {
+    background: linear-gradient(135deg, #e94560, #c62828);
+}
+
+.connect-btn {
+    background: linear-gradient(135deg, #4CAF50, #388E3C);
+}
+
+.manual-connect {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.manual-connect input {
+    padding: 12px 20px;
+    font-size: 1rem;
+    font-family: 'Russo One', sans-serif;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    width: 250px;
+    outline: none;
+}
+
+.manual-connect input:focus {
+    border-color: #00d9ff;
+}
+
+/* ============================================
+   🏠 ЛОББИ КОМНАТЫ
+   ============================================ */
+
+.lobby-content {
+    min-width: 450px;
+    animation: none;
+}
+
+.lobby-title {
+    font-family: 'Bangers', cursive;
+    font-size: 2rem;
+    color: #fff;
+    margin-bottom: 20px;
+}
+
+.lobby-title span {
+    color: #4CAF50;
+}
+
+.room-code-display {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.room-code-display>span {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.room-code {
+    font-family: 'Bangers', cursive;
+    font-size: 2.5rem;
+    color: #ffcc00;
+    letter-spacing: 8px;
+    text-shadow: 0 0 20px rgba(255, 204, 0, 0.5);
+    background: rgba(255, 204, 0, 0.1);
+    padding: 10px 25px;
+    border-radius: 10px;
+    border: 2px dashed #ffcc00;
+}
+
+.copy-btn {
+    padding: 10px 20px;
+    font-family: 'Russo One', sans-serif;
+    color: #fff;
+    background: linear-gradient(135deg, #2196F3, #1976D2);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.copy-btn:hover {
+    transform: scale(1.05);
+}
+
+.lobby-players {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.lobby-players h3 {
+    color: #00d9ff;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.lobby-players ul {
+    list-style: none;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.lobby-players li {
+    padding: 10px 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #fff;
+}
+
+.lobby-players .player-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+}
+
+.lobby-players .host-badge {
+    background: #ffcc00;
+    color: #000;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 0.8rem;
+    margin-left: auto;
+}
+
+.lobby-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Кнопка ПУСК */
+.start-btn {
+    position: relative;
+    padding: 18px 50px;
+    font-size: 1.8rem;
+    font-family: 'Bangers', cursive;
+    letter-spacing: 3px;
+    color: #fff;
+    background: linear-gradient(135deg, #e94560, #ff6b6b);
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow:
+        0 10px 30px rgba(233, 69, 96, 0.4),
+        inset 0 -5px 0 rgba(0, 0, 0, 0.2);
+}
+
+.start-btn:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow:
+        0 20px 50px rgba(233, 69, 96, 0.6),
+        inset 0 -5px 0 rgba(0, 0, 0, 0.2);
+}
+
+.start-btn:active {
+    transform: translateY(0) scale(0.98);
+}
+
+/* Управление */
+.controls-info {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 15px;
+    color: #fff;
+    font-size: 0.9rem;
+}
+
+.controls-info h3 {
+    margin-bottom: 10px;
+    color: #00d9ff;
+    font-size: 1rem;
+}
+
+.controls-info p {
+    margin: 5px 0;
+}
+
+.key {
+    display: inline-block;
+    background: linear-gradient(135deg, #e94560, #ff6b6b);
+    padding: 3px 10px;
+    border-radius: 5px;
+    margin-right: 8px;
+    font-size: 0.85rem;
+}
+
+/* ============================================
+   🎮 ИГРОВОЙ UI
+   ============================================ */
+
+.game-ui {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 15px 20px;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.stats-panel {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.stat-item {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.7), rgba(30, 30, 50, 0.8));
+    padding: 10px 20px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(5px);
+}
+
+.stat-icon {
+    font-size: 1.3rem;
+}
+
+.stat-label {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+}
+
+.stat-value {
+    color: #00d9ff;
+    font-size: 1.3rem;
+    font-family: 'Bangers', cursive;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+}
+
+.wave-stat .stat-value {
+    color: #ffcc00;
+    text-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+}
+
+.room-info .stat-value {
+    color: #4CAF50;
+    font-size: 1rem;
+}
+
+/* Список игроков */
+.players-list {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 15px;
+    border-radius: 15px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    min-width: 150px;
+    backdrop-filter: blur(5px);
+}
+
+.players-list h4 {
+    margin-bottom: 10px;
+    color: #00d9ff;
+}
+
+.players-list ul {
+    list-style: none;
+}
+
+.players-list li {
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.players-list li:last-child {
+    border-bottom: none;
+}
+
+.player-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+/* ============================================
+   🎯 CANVAS
+   ============================================ */
+
+#gameCanvas {
+    display: block;
+    background: #2d5a27;
+}
+
+/* ============================================
+   💀 GAME OVER
+   ============================================ */
+
+.game-over {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.game-over-content {
+    text-align: center;
+    color: #fff;
+    animation: gameOverPop 0.5s ease-out;
+}
+
+@keyframes gameOverPop {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.game-over h1 {
+    font-family: 'Bangers', cursive;
+    font-size: 4rem;
+    color: #e94560;
+    text-shadow: 0 0 50px rgba(233, 69, 96, 0.8);
+    margin-bottom: 25px;
+}
+
+.game-over p {
+    font-size: 1.8rem;
+    margin: 15px 0;
+}
+
+.game-over span {
+    color: #00d9ff;
+    font-family: 'Bangers', cursive;
+}
+
+.game-over .start-btn {
+    margin: 10px;
+}
+
+.game-over .back-btn {
+    margin-top: 15px;
+}
+
+/* ============================================
+   🌊 АНОНС ВОЛНЫ
+   ============================================ */
+
+.wave-announce {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Bangers', cursive;
+    font-size: 4rem;
+    color: #ffcc00;
+    text-shadow:
+        0 0 30px rgba(255, 204, 0, 0.8),
+        4px 4px 0 #e94560;
+    z-index: 500;
+    animation: waveAnnounce 2s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes waveAnnounce {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0;
+    }
+
+    20% {
+        transform: translate(-50%, -50%) scale(1.3);
+        opacity: 1;
+    }
+
+    80% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 0;
+    }
+}
+
+/* ============================================
+   🔔 УВЕДОМЛЕНИЯ
+   ============================================ */
+
+.notification {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(30, 30, 50, 0.9));
+    color: #fff;
+    padding: 15px 30px;
+    border-radius: 15px;
+    border: 2px solid #00d9ff;
+    font-size: 1.1rem;
+    z-index: 3000;
+    animation: notifySlide 0.3s ease-out;
+}
+
+@keyframes notifySlide {
+    from {
+        transform: translateX(-50%) translateY(50px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+}
+
+.notification.success {
+    border-color: #4CAF50;
+}
+
+.notification.error {
+    border-color: #e94560;
+}
+
+/* ============================================
+   🔧 УТИЛИТЫ
+   ============================================ */
+
+.hidden {
+    display: none !important;
+}
+
+/* Скроллбар */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #e94560;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #ff6b6b;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .title {
+        font-size: 2rem;
+    }
+
+    .subtitle {
+        font-size: 1rem;
+    }
+
+    .input-group input {
+        width: 250px;
+    }
+
+    .menu-btn {
+        padding: 15px 30px;
+        font-size: 1.2rem;
+    }
+
+    .start-btn {
+        padding: 15px 40px;
+        font-size: 1.5rem;
+    }
+
+    .stats-panel {
+        gap: 10px;
+    }
+
+    .stat-item {
+        padding: 8px 12px;
+    }
+
+    .wave-announce {
+        font-size: 2.5rem;
+    }
+
+    .server-browser,
+    .lobby-content {
+        min-width: auto;
+        width: 95%;
+    }
+
+    .room-code {
+        font-size: 2rem;
+        letter-spacing: 5px;
+    }
+}
